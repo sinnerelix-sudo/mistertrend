@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = env("postgresql")
+  provider = env("postgresql://postgres:postgres@localhost:5432/mistertrend?schema=public")
   url      = env("DATABASE_URL")
 }
 
