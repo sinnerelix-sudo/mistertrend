@@ -1,0 +1,157 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = env("DB_PROVIDER")
+  url      = env("DATABASE_URL")
+}
+
+enum Role { ADMIN CUSTOMER }
+enum DiscountType { NONE FIXED PERCENT }
+enum CouponType { FIXED PERCENT }
+enum OrderStatus { PENDING_PAYMENT PROCESSING SHIPPED DELIVERED CANCELLED REFUNDED }
+enum PaymentStatus { PENDING PAID FAILED }
+enum DeliveryStatus { NOT_SENT SENT DELIVERED FAILED }
+enum IntegrationType { PAYMENT DELIVERY }
+
+model User {
+  id        String   @id @default(cuid())
+  name      String?
+  phone     String   @unique
+  role      Role     @default(CUSTOMER)
+  createdAt DateTime @default(now())
+  orders    Order[]
+}
+
+model OtpCode {
+  id        String   @id @default(cuid())
+  phone     String
+  codeHash  String
+  expiresAt DateTime
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+model Category {
+  id         String   @id @default(cuid())
+  slug       String   @unique
+  nameAz     String
+  nameRu     String
+  seoTitleAz String?
+  seoTitleRu String?
+  seoDescAz  String?
+  seoDescRu  String?
+  createdAt  DateTime @default(now())
+  products   Product[]
+}
+
+model Product {
+  id            String       @id @default(cuid())
+  slug          String       @unique
+  titleAz       String
+  titleRu       String
+  descAz        String
+  descRu        String
+  price         Decimal      @db.Decimal(10, 2)
+  discountType  DiscountType @default(NONE)
+  discountValue Decimal      @default(0) @db.Decimal(10, 2)
+  stock         Int
+  images        String[]
+  keywordsAz    String[]
+  keywordsRu    String[]
+  featured      Boolean      @default(false)
+  trending      Boolean      @default(false)
+  categoryId    String
+  seoTitleAz    String?
+  seoTitleRu    String?
+  seoDescAz     String?
+  seoDescRu     String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  category      Category     @relation(fields: [categoryId], references: [id])
+}
+
+model Banner {
+  id         String  @id @default(cuid())
+  titleAz    String
+  titleRu    String
+  subtitleAz String?
+  subtitleRu String?
+  imageUrl   String
+  linkUrl    String?
+  active     Boolean @default(true)
+  sortOrder  Int     @default(0)
+}
+
+model Coupon {
+  id             String     @id @default(cuid())
+  code           String     @unique
+  type           CouponType
+  value          Decimal    @db.Decimal(10, 2)
+  minOrderAmount Decimal?   @db.Decimal(10, 2)
+  startsAt       DateTime?
+  endsAt         DateTime?
+  active         Boolean    @default(true)
+  orders         Order[]
+}
+
+model Order {
+  id              String         @id @default(cuid())
+  userId          String
+  status          OrderStatus    @default(PENDING_PAYMENT)
+  paymentStatus   PaymentStatus  @default(PENDING)
+  paymentProvider String         @default("EPOINT_STUB")
+  paymentRef      String?
+  deliveryStatus  DeliveryStatus @default(NOT_SENT)
+  deliveryRef     String?
+  subtotal        Decimal        @db.Decimal(10, 2)
+  discountTotal   Decimal        @db.Decimal(10, 2)
+  shippingFee     Decimal        @db.Decimal(10, 2)
+  total           Decimal        @db.Decimal(10, 2)
+  currency        String         @default("AZN")
+  couponId        String?
+  contactName     String
+  contactPhone    String
+  addressText     String
+  addressLat      Float?
+  addressLng      Float?
+  city            String?
+  notes           String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  user            User           @relation(fields: [userId], references: [id])
+  coupon          Coupon?        @relation(fields: [couponId], references: [id])
+  items           OrderItem[]
+}
+
+model OrderItem {
+  id              String   @id @default(cuid())
+  orderId         String
+  productId       String
+  titleSnapshotAz String
+  titleSnapshotRu String
+  priceSnapshot   Decimal  @db.Decimal(10, 2)
+  qty             Int
+  imageSnapshotUrl String?
+  order           Order    @relation(fields: [orderId], references: [id])
+}
+
+model Settings {
+  id                    Int      @id
+  shippingFee           Decimal  @default(4.99) @db.Decimal(10, 2)
+  freeShippingThreshold Decimal  @default(100) @db.Decimal(10, 2)
+  defaultLocale         String   @default("az")
+  brandName             String   @default("MISTER TREND")
+  supportPhone          String?
+}
+
+model IntegrationLog {
+  id           String          @id @default(cuid())
+  provider     String
+  type         IntegrationType
+  requestJson  Json
+  responseJson Json
+  success      Boolean
+  createdAt    DateTime        @default(now())
+}

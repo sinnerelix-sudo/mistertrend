@@ -1,0 +1,1 @@
+-- Run `pnpm prisma:migrate` to apply schema migrations.
